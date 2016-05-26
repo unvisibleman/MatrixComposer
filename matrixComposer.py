@@ -4,35 +4,23 @@
 import sys
 import numpy as np
 
-# add добавляет в список x если его в списке нет
-def add(i):
-	if i == 1:
-		return
-	if isinstance(i, int):
-		if [i] not in coef:
-			coef.append([i])
-			return
-	if i not in coef:
-		coef.append(i)
-		return
-
 # функция gen добавляет значения в список coef для развертывания инструкций
 def gen(x):
-	s = []
-	for i in xrange(1, x):
-		gen(i)
-		add([i, x])
-		s.append(i)
-	
-	add(x);
-	s.append(x);
-	add(s)
+	try:
+		arr = np.array([list(np.binary_repr(z, x)) for z in xrange(1, 2**x)], dtype=int)
+	except MemoryError:
+		sys.exit("Слишком много комбинаций при разложении:"+str(2**x))
+	for m in arr:
+		temp = list(np.nonzero(m)[0])
+		coef.append( temp )
 
 # 1. Пытаемся открыть входной файл и считать основную информацию
 if len(sys.argv) == 1:
-	sys.exit( "Не указано имя входного файла.")
+	sys.exit("Не указано имя входного файла.")
 inputFile = sys.argv[1]
 outputFile = inputFile.replace("table", "LPX")
+if inputFile == outputFile:
+	sys.exit("Входной файл имеет расширение, отличное от .table")
 try:
 	methods = [line.rstrip('\n') for line in open(inputFile)]
 except IOError:
@@ -65,7 +53,7 @@ for met in methods:
 			try:
 				c[i][IS.index(p)] = 1 # ставим единицы для используемых инструкций
 			except ValueError:
-				sys.exit("Ошибка входных данных! Использованная в строке "+met+" инструкция "+p+" не найдена в наборе")
+				sys.exit("Ошибка входных данных! Использованная в строке "+repr(met)+" инструкция "+repr(p)+" не найдена в наборе")
 	i+=1
 
 # 3. Развертка всех способов представления
@@ -93,21 +81,25 @@ for i in xrange(n, len(b)):
 	if len(methods) != 0: # если таковые инструкции нашлись
 		coef = []
 		gen(numberOfUsedInstructions)
-		if len(coef) == 0: # если результат нулевого размера, то количествво комбинаций принять 1
+		actuallyAdded = 0 # количество действительно добавленных инструкций
+		if len(coef) == 0: # если результат нулевого размера, то количество комбинаций принять 1
 			coef = [[1]]
-		lines2write = numberOfUsedInstructions*(numberOfUsedInstructions-1)+1
-		print "Необходимо развернуть инструкцию",IS[instrPresentation], "и добавить", lines2write, "способ(а)."
+		lines2write = len(coef) # n*(n-1)+1
 		for j in xrange(0, lines2write):
 			newPart = [0]*n # массив перед операцией OR должен быть инициализирован кол-вом нулей, раным кол-ву инструкций
 			iUsed = [True]*n
 			for k in xrange(0, len(coef[j])):
-				newPart = np.logical_or(methods[coef[j][k]-1], newPart) # новые методы
-				iUsed = np.logical_and(iUsed, instructionUsed[coef[j][k]-1]) # исключение старых
+				newPart = np.logical_or(methods[coef[j][k]], newPart) # новые методы
+				iUsed = np.logical_and(iUsed, instructionUsed[coef[j][k]]) # исключение старых
 			methodBasis = np.logical_and(c[i], iUsed) # основание для нового способа
 			newMethod = np.logical_or(methodBasis, newPart) # окончательная его генерация
-			c.append(newMethod) #добавляем новый способ в матрицу С
-			b.append(b[i]) # а в м-цу B вектор, описывающий какую инструкцию, мы раскладывали 
+			if newMethod[instrPresentation] != 1: # если полученный способ НЕ содержит инструкцию, которую мы раскладываем
+				c.append(newMethod) #добавляем новый способ в матрицу С
+				b.append(b[i]) # а в м-цу B вектор, описывающий какую инструкцию, мы раскладывали 
+				actuallyAdded += 1
 		del coef
+		if actuallyAdded>0:
+			print "Инструкция",IS[instrPresentation], "развернута, добавлено", actuallyAdded, "способ(а)."
 
 print "Всего инструкций: n=", n, ", способов представления (в т.ч. и полученных в результате развертывания): K=", len(b)-n
 print "Количество строк матриц: n*(K+1)=", len(b)

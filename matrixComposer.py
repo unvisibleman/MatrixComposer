@@ -4,12 +4,22 @@
 import sys
 import numpy as np
 
+# проверяем, была ли instrPresentation уже представлена с помощью newMethod
+def alreadyNotPresented(instrPresentation, newMethod):
+	it = 0
+	for i in list(np.nonzero(b)[1]):
+		if i == instrPresentation:
+			if list(newMethod) == list(c[it]):
+				return False
+		it+=1
+	return True
+
 # функция gen добавляет значения в список coef для развертывания инструкций
 def gen(x):
 	try:
 		arr = np.array([list(np.binary_repr(z, x)) for z in xrange(1, 2**x)], dtype=int)
 	except MemoryError:
-		sys.exit("Слишком много комбинаций при разложении:"+str(2**x))
+		sys.exit("Слишком много ("+str(2**x)+") комбинаций при разложении инструкции")
 	for m in arr:
 		temp = list(np.nonzero(m)[0])
 		coef.append( temp )
@@ -38,9 +48,12 @@ i = n # номер строки матриц, с которой начинают
 for met in methods:
 	method = met.split(' ')
 	if len(method) <= 1: # строка длиной в один символ, требуем следующую
-		break
+		continue
 	method[0] = method[0][:-1] # удаляем последний символ из 1-ого слова
-	b[i][IS.index(method[0])] = 1 # текущий метод представляет инструкцию, найденную по индексу
+	try:
+		b[i][IS.index(method[0])] = 1 # текущий метод представляет инструкцию, найденную по индексу
+	except ValueError:
+		sys.exit("Ошибка входных данных! Использованная в строке "+repr(met)+" инструкция "+repr(method[0])+" не найдена в наборе")
 	del method[0] # удаляем из вектора первый элемент - остаются только названия инструкций, которые используются в методе
 	for p in method:
 		# если строка нулевого размера, то пропускаем
@@ -57,49 +70,56 @@ for met in methods:
 	i+=1
 
 # 3. Развертка всех способов представления
-# для каждого способа представления в матрицах
-for i in xrange(n, len(b)):
-	# массив номеров инструкций
-	instructionUsed = np.empty((0, n), bool)
-	# массив способов
-	methods = np.empty((0, n), bool)
-	# количество инструкций, для которых также нашлись способы
-	numberOfUsedInstructions = 0;
-	# 1. определяем какую инструкцию представляет текущий способ
-	for instrPresentation in xrange(0, n):
-		if b[i][instrPresentation] == 1:
-			break;
-	# 2. Определяем какие инструкции участвуют в текущем способе
-	for instrAtPresentation in xrange(0, n):
-		if c[i][instrAtPresentation] == 1:
-			# 3. Определяем какие есть способы представить каждую инструкцию из текущего способа (кроме как через себя)
-			for looking4presentation in xrange(n, len(b)):
-				if b[looking4presentation][instrAtPresentation] == 1:
-					numberOfUsedInstructions += 1
-					methods = np.vstack([methods, c[looking4presentation]])
-					instructionUsed = np.vstack([instructionUsed, np.logical_not(b[looking4presentation])])
-	if len(methods) != 0: # если таковые инструкции нашлись
-		coef = []
-		gen(numberOfUsedInstructions)
-		actuallyAdded = 0 # количество действительно добавленных инструкций
-		if len(coef) == 0: # если результат нулевого размера, то количество комбинаций принять 1
-			coef = [[1]]
-		lines2write = len(coef) # n*(n-1)+1
-		for j in xrange(0, lines2write):
-			newPart = [0]*n # массив перед операцией OR должен быть инициализирован кол-вом нулей, раным кол-ву инструкций
-			iUsed = [True]*n
-			for k in xrange(0, len(coef[j])):
-				newPart = np.logical_or(methods[coef[j][k]], newPart) # новые методы
-				iUsed = np.logical_and(iUsed, instructionUsed[coef[j][k]]) # исключение старых
-			methodBasis = np.logical_and(c[i], iUsed) # основание для нового способа
-			newMethod = np.logical_or(methodBasis, newPart) # окончательная его генерация
-			if newMethod[instrPresentation] != 1: # если полученный способ НЕ содержит инструкцию, которую мы раскладываем
-				c.append(newMethod) #добавляем новый способ в матрицу С
-				b.append(b[i]) # а в м-цу B вектор, описывающий какую инструкцию, мы раскладывали 
-				actuallyAdded += 1
-		del coef
-		if actuallyAdded>0:
-			print "Инструкция",IS[instrPresentation], "развернута, добавлено", actuallyAdded, "способ(а)."
+flag = True
+while flag:
+	totalAdded = 0 # суммарное количество добавленных инструкций на итерации
+	# для каждого способа представления в матрицах
+	for i in xrange(n, len(b)):
+		# массив номеров инструкций
+		instructionUsed = np.empty((0, n), bool)
+		# массив способов
+		methods = np.empty((0, n), bool)
+		# количество инструкций, для которых также нашлись способы
+		numberOfUsedInstructions = 0;
+		# 1. определяем какую инструкцию представляет текущий способ
+		for instrPresentation in xrange(0, n):
+			if b[i][instrPresentation] == 1:
+				break;
+		# 2. Определяем какие инструкции участвуют в текущем способе
+		for instrAtPresentation in xrange(0, n):
+			if c[i][instrAtPresentation] == 1:
+				# 3. Определяем какие есть способы представить каждую инструкцию из текущего способа (кроме как через себя)
+				for looking4presentation in xrange(n, len(b)):
+					if b[looking4presentation][instrAtPresentation] == 1:
+						numberOfUsedInstructions += 1
+						methods = np.vstack([methods, c[looking4presentation]])
+						instructionUsed = np.vstack([instructionUsed, np.logical_not(b[looking4presentation])])
+		if len(methods) != 0: # если таковые инструкции нашлись
+			coef = []
+			gen(numberOfUsedInstructions)
+			actuallyAdded = 0 # количество действительно добавленных инструкций
+			if len(coef) == 0: # если результат нулевого размера, то количество комбинаций принять 1
+				coef = [[1]]
+			lines2write = len(coef)
+			for j in xrange(0, lines2write):
+				newPart = [0]*n # массив перед операцией OR должен быть инициализирован кол-вом нулей, раным кол-ву инструкций
+				iUsed = [True]*n
+				for k in xrange(0, len(coef[j])):
+					newPart = np.logical_or(methods[coef[j][k]], newPart) # новые методы
+					iUsed = np.logical_and(iUsed, instructionUsed[coef[j][k]]) # исключение старых
+				methodBasis = np.logical_and(c[i], iUsed) # основание для нового способа
+				newMethod = np.logical_or(methodBasis, newPart) # окончательная его генерация
+				# если полученный способ НЕ содержит инструкцию, которую мы раскладываем
+				if newMethod[instrPresentation] != 1 and alreadyNotPresented(instrPresentation, newMethod):
+					c.append(newMethod) #добавляем новый способ в матрицу С
+					b.append(b[i]) # а в м-цу B вектор, описывающий какую инструкцию, мы раскладывали
+					actuallyAdded += 1
+			del coef
+			if actuallyAdded>0:
+				print "Инструкция",IS[instrPresentation], "развернута, добавлено", actuallyAdded, "способ(а)."
+				totalAdded += actuallyAdded # учтем кол-во добавленных инструкций
+	if totalAdded == 0: # если ни одной инструкции за итерацию
+		flag = False
 
 print "Всего инструкций: n=", n, ", способов представления (в т.ч. и полученных в результате развертывания): K=", len(b)-n
 print "Количество строк матриц: n*(K+1)=", len(b)

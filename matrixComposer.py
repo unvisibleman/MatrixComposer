@@ -9,9 +9,10 @@ def clearMatrix():
 	for i in xrange(n, len(b)):
 		for j in xrange(n, len(b)):
 			if i!=j and b[i] == b[j]:
-#				print b[i], c[j], c[i]
+#				print list(np.nonzero(b[i])[0]), list(np.nonzero(c[j])[0]), list(np.nonzero(c[i])[0])
 				if subSet(c[j], c[i]): # если c_j в c_i, то с_i - избыточен
 					forDel.add(i)
+#					print "-"
 	for i in sorted(forDel, reverse = True):
 		del c[i], b[i]
 	del forDel

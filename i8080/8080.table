@@ -1,0 +1,54 @@
+mov ldax lda mvi stax sta lxi lhld shld sphl xchg xthl add adi adc aci dad sub sui sbb sbi inr dcr inx dcx daa cma stc cmc rlc rrc ral rar ana ani xra xri ora ori cmp cpi jmp jnz jz jnc jc jpo jpe jp jm pchl call cnz cz cnc cc cpo cpe cp cm ret rnz rz rnc rc rpo rpe rp rm rst push pop in out di ei nop hlt
+ldax: mov # переместить регистровую пару в А
+lda: ani add # загрузка из памяти в А
+mvi: adi
+stax: mov  # переместить А в регистровую пару 
+lxi: mvi  # загрузка константы в регистровую пару 
+lhld: mov lda # загрузка из памяти в регистровую пару HL
+shld: mov sta # сохранение регистровой пары HL в память  
+sphl: mov  # SP=HL
+xchg: mov  # обмен между HL и DE (H<->D, L<->E)
+xthl: mov  # почти обмен между HL и SP
+adc: add # сложение с переносом
+aci: mvi adi  # .. с константой с переносом
+dad: add  # .. для регистровых пар
+sub: add
+sui: mvi sub  # .. с константой
+sbi: mvi sbb  # .. из константы с переносом
+dcr: cma inr # декремент
+inx: inr  # inr для регистровой пары
+dcx: dcr  # dcr для регистровой пары
+daa: nop
+rrc: rlc
+rar: ral
+xra: cma ana # XOR
+xri: lda xra # XOR с константой
+ora: cma ana # логические OR
+ori: lda ora # OR с константой
+cmp: add  # сравнение (вычитание)
+cpi: lda cmp # CMP с константой
+jnz: cma jz # переход если не ноль
+jnc: cmc jc  # переход если не перенос
+jpo: ana jnz # переход нечетно
+jpe: ana jz # переход если четно
+jp: ana jnz # переход если плюс
+jm: ana jz # переход если минус
+pchl: mov jmp  # перейти по адресу из HL
+cnz: jz call # вызов если не ноль
+cz: jnz call # вызов если ноль
+cnc: cmc cc  # вызов если не перенос
+cpo: ana cnz # вызов если нечетно
+cpe: ana cz # вызов если четно
+cp: ana cnz # вызов если плюс
+cm: ana cz # вызов если минус
+ret: pop jmp # ВОЗВРАТ
+rnz: jz ret  # возврат если не ноль
+rz: jnz ret  # возврат если ноль
+rpo: ana rnz # # .. если нечетно
+rpe: ana rz # .. если четно
+rp: ana rnz # .. если плюс
+rm: ana rz # .. если минус
+rst: call  # вызов функций по 8 заранее установленным адресам
+push: sta inr
+pop: sta dcr
+nop: add  # нет операции (add 0)
